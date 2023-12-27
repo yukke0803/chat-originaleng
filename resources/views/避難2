@@ -1,0 +1,117 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 col-md-offset-2">
+            {{-- チャットメッセージ表示エリア --}}
+            <div id="room">
+                @foreach($messages as $key => $message)
+                    {{-- 送信したメッセージ --}}
+                    @if($message->send == \Illuminate\Support\Facades\Auth::id())
+                        <div class="send" style="text-align: right">
+                            <p>{{$message->message}}</p>
+                        </div>
+                    @endif
+                    {{-- 受信したメッセージ --}}
+                    @if($message->receive == \Illuminate\Support\Facades\Auth::id())
+                        <div class="receive" style="text-align: left">
+                            <p>{{$message->message}}</p>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+
+            {{-- メッセージ送信フォーム --}}
+            <form id="chat-form">
+                <textarea name="message" style="width:100%"></textarea>
+                <button type="button" id="btn_send">送信</button>
+                <input type="hidden" name="send" value="{{$param['send']}}">
+                <input type="hidden" name="receive" value="{{$param['receive']}}">
+                <input type="hidden" name="login" value="{{\Illuminate\Support\Facades\Auth::id()}}">
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
+
+@section('script')
+<script type="text/javascript">
+    // チャットメッセージを追加する関数
+    function appendMessage(data, login) {
+        let appendText;
+        if (data.send === login) {
+            appendText = '<div class="send" style="text-align:right"><p>' + data.message + '</p></div>';
+        } else if (data.receive === login) {
+            appendText = '<div class="receive" style="text-align:left"><p>' + data.message + '</p></div>';
+        } else {
+            return false;
+        }
+        $("#room").append(appendText);
+    }
+
+    // ログインユーザーのIDを取得
+    let loginUserId = $('input[name="login"]').val();
+
+    // Pusherの設定
+    var pusher = new Pusher('4afa55f8efe90ae5021e', {
+        cluster: 'ap3',
+        encrypted: true
+    });
+    var pusherChannel = pusher.subscribe('chat');
+
+    // チャットイベントの受信処理
+    pusherChannel.bind('chat_event', function(data) {
+        appendMessage(data, loginUserId);
+
+        // 新着メッセージの場合、ブラウザへ通知
+        if (data.receive === loginUserId) {
+            Push.create("新着メッセージ", {
+                body: data.message,
+                timeout: 8000,
+                onClick: function() {
+                    window.focus();
+                    this.close();
+                }
+            });
+        }
+    });
+
+    // メッセージ送信処理
+    $('#btn_send').on('click', function() {
+        let message = $('textarea[name="message"]').val();
+        if (message.trim() === '') {
+            // 空メッセージは送信しない
+            return;
+        }
+
+            // Pusherを使用してメッセージを送信
+        pusherChannel.trigger('client-chat', {
+            message: message,
+            send: $('input[name="send"]').val(),
+            receive: $('input[name="receive"]').val(),
+        });
+
+        $.ajax({
+            type: 'POST',
+            url: '/chat/send',
+            data: {
+                message: message,
+                send: $('input[name="send"]').val(),
+                receive: $('input[name="receive"]').val(),
+            },
+            success: function(result) {
+                $('textarea[name="message"]').val('');
+                // appendMessage(result, loginUserId); // 送信したメッセージを即時表示する場合
+            },
+            error: function(xhr, status, error) {
+                console.error(error);
+                // エラーが発生した場合の処理
+            }
+        });
+        
+        
+    });
+    
+</script>
+@endsection
