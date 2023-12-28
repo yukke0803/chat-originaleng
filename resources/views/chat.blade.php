@@ -29,9 +29,6 @@
     <form>
         <textarea name="message" style="width:100%"></textarea>
         <button  id="btn_send" onclick='send()'>送信aa</button>
-        {{-- <input type="hidden" name="send" value="{{$param['send']}}">
-        <input type="hidden" name="receive" value="{{$param['receive']}}">
-        <input type="hidden" name="login" value="{{\Illuminate\Support\Facades\Auth::id()}}"> --}}
     </form>
 
     <input type="hidden" name="send" value="{{$param['send']}}">
@@ -39,8 +36,8 @@
     <input type="hidden" name="login" value="{{\Illuminate\Support\Facades\Auth::id()}}">
  
 </div>
- 
 @endsection
+
 @section('script')
     <script type="text/javascript">
  
@@ -58,9 +55,6 @@
             console.log('Pusher Connection State:', states.current);
         });
  
-       //購読するチャンネルを指定
-       var pusherChannel = pusher.subscribe('chat');
- 
        //イベントを受信したら、下記処理
        pusherChannel.bind('chat_event', function(data) {
  
@@ -75,21 +69,6 @@
                return false;
            }
  
-           // メッセージを表示
-           $("#room").append(appendText);
- 
-           if(data.receive === login){
-               // ブラウザへプッシュ通知
-               Push.create("新着メッセージ",
-                   {
-                       body: data.message,
-                       timeout: 8000,
-                       onClick: function () {
-                           window.focus();
-                           this.close();
-                       }
-                   })
-           }
        });
  
         $.ajaxSetup({
